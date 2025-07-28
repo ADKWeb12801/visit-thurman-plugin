@@ -65,10 +65,8 @@ class VT_Accommodations {
     public static function render_meta_box($post) {
         wp_nonce_field('vt_save_accommodation_meta', 'vt_accommodation_meta_nonce');
         $fields = [
-            '_vt_beds' => __('Beds', 'visit-thurman'),
-            '_vt_max_guests' => __('Max Guests', 'visit-thurman'),
-            '_vt_rates' => __('Rates', 'visit-thurman'),
-            '_vt_booking_url' => __('Booking URL', 'visit-thurman'),
+            '_vt_booking_url' => __('Website URL', 'visit-thurman'),
+            '_vt_address'     => __('Physical Address', 'visit-thurman'),
         ];
         echo '<div class="vt-meta-box">';
         foreach ($fields as $key => $label) {
@@ -83,10 +81,14 @@ class VT_Accommodations {
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
         if (!current_user_can('edit_post', $post_id)) return;
         
-        $fields = ['_vt_beds', '_vt_max_guests', '_vt_rates', '_vt_booking_url'];
+        $fields = ['_vt_booking_url', '_vt_address'];
         foreach ($fields as $key) {
             if (isset($_POST[$key])) {
-                update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));
+                $value = sanitize_text_field($_POST[$key]);
+                if ($key === '_vt_booking_url') {
+                    $value = esc_url_raw($value);
+                }
+                update_post_meta($post_id, $key, $value);
             }
         }
     }

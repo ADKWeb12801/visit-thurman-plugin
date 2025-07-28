@@ -26,6 +26,7 @@ category - filter by category slug
 tag      - filter by tag slug
 meta_key - custom field for ordering
 search   - search keyword
+ajax     - enable ajax filters (true/false)
 ```
 
 Example:
@@ -41,4 +42,8 @@ User dashboards show existing claim requests via `[vt_user_dashboard]`.
 
 ## Social Sharing
 Use `[vt_share_buttons]` inside a single listing to output simple share links to Facebook, Twitter and LinkedIn.
+
+### Version 2.0 Highlights
+* AJAX search and sorting for listing shortcodes using the `ajax="true"` attribute
+* Import and export now include each post's featured image URL
 

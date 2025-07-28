@@ -3,7 +3,7 @@
  * Plugin Name: Visit Thurman Listings & Community Hub
  * Plugin URI: https://visitthurman.com
  * Description: A modular WordPress plugin for managing events, businesses, accommodations, and TCA members with social features.
- * Version: 1.4.0
+ * Version: 2.0.0
  * Author: Visit Thurman Development Team
  * License: GPL v2 or later
  * Text Domain: visit-thurman
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('VT_VERSION', '1.4.0');
+define('VT_VERSION', '2.0.0');
 define('VT_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('VT_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('VT_PLUGIN_BASENAME', plugin_basename(__FILE__));

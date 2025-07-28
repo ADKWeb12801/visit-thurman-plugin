@@ -325,7 +325,7 @@ class VT_Import_Export {
      * Get CSV headers
      */
     private function get_csv_headers($post_type) {
-        $headers = array('ID', 'Title', 'Content', 'Excerpt', 'Status', 'Author', 'Date');
+        $headers = array('ID', 'Title', 'Content', 'Excerpt', 'Status', 'Author', 'Date', 'Featured Image');
         
         switch ($post_type) {
             case VT_Events::POST_TYPE:
@@ -380,6 +380,7 @@ class VT_Import_Export {
             $post->post_status,
             get_the_author_meta('display_name', $post->post_author),
             $post->post_date,
+            get_the_post_thumbnail_url($post->ID, 'full'),
         );
         
         switch ($post_type) {
@@ -641,10 +642,22 @@ class VT_Import_Export {
         
         // Import meta data
         $this->import_post_meta($post_id, $data, $post_type);
-        
+
         // Import taxonomies
         $this->import_post_taxonomies($post_id, $data, $post_type);
-        
+
+        // Set featured image if provided
+        $image_url = $data['Featured Image'] ?? $data['featured_image'] ?? '';
+        if ($image_url) {
+            include_once ABSPATH . 'wp-admin/includes/file.php';
+            include_once ABSPATH . 'wp-admin/includes/media.php';
+            include_once ABSPATH . 'wp-admin/includes/image.php';
+            $image_id = media_sideload_image(esc_url_raw($image_url), $post_id, null, 'id');
+            if (!is_wp_error($image_id)) {
+                set_post_thumbnail($post_id, $image_id);
+            }
+        }
+
         return true;
     }
     

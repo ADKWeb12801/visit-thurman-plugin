@@ -49,7 +49,8 @@ class VT_Shortcodes {
             'category'  => '',
             'tag'       => '',
             'meta_key'  => '',
-            'search'    => ''
+            'search'    => '',
+            'ajax'      => 'false'
         ), $atts);
         
         $paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
@@ -92,33 +93,66 @@ class VT_Shortcodes {
         if (!empty($atts['search'])) {
             $args['s'] = sanitize_text_field($atts['search']);
         }
-        
+
+        $output = '';
+        if ($atts['ajax'] === 'true') {
+            $uid = 'vt-list-' . wp_generate_password(8, false, false);
+            $terms = get_terms(array('taxonomy' => $post_type . '_category', 'hide_empty' => false));
+            $output .= '<form class="vt-listing-filters" data-target="#' . esc_attr($uid) . '">';
+            $output .= '<input type="hidden" name="post_type" value="' . esc_attr($post_type) . '">';
+            $output .= '<input type="hidden" name="limit" value="' . intval($atts['limit']) . '">';
+            $output .= '<input type="hidden" name="columns" value="' . intval($atts['columns']) . '">';
+            $output .= '<input type="text" name="search" placeholder="' . esc_attr__('Search', 'visit-thurman') . '">';
+            $output .= '<select name="orderby">';
+            $output .= '<option value="date">' . esc_html__('Date', 'visit-thurman') . '</option>';
+            $output .= '<option value="title">' . esc_html__('Title', 'visit-thurman') . '</option>';
+            $output .= '</select>';
+            if ($terms && !is_wp_error($terms)) {
+                $output .= '<select name="category"><option value="">' . esc_html__('Category', 'visit-thurman') . '</option>';
+                foreach ($terms as $term) {
+                    $output .= '<option value="' . esc_attr($term->slug) . '">' . esc_html($term->name) . '</option>';
+                }
+                $output .= '</select>';
+            }
+            $output .= '<button type="submit" class="vt-button">' . esc_html__('Filter', 'visit-thurman') . '</button>';
+            $output .= '</form>';
+            $output .= '<div id="' . esc_attr($uid) . '">';
+            $output .= self::render_listings($args, $atts['columns']);
+            $output .= '</div>';
+            return $output;
+        }
+
+        return self::render_listings($args, $atts['columns']);
+    }
+
+    public static function render_listings($args, $columns = 3, $no_pagination = false) {
         $query = new WP_Query($args);
-        
+
         ob_start();
-        
+
         if ($query->have_posts()) {
-            echo '<div class="vt-grid vt-grid-' . esc_attr($atts['columns']) . '">';
+            echo '<div class="vt-grid vt-grid-' . esc_attr($columns) . '">';
             while ($query->have_posts()) {
                 $query->the_post();
                 self::render_card(get_the_ID());
             }
             echo '</div>';
 
-            // Pagination
-            echo '<div class="vt-pagination">';
-            echo paginate_links(array(
-                'total' => $query->max_num_pages,
-                'current' => $paged,
-                'prev_text' => __('&laquo; Prev', 'visit-thurman'),
-                'next_text' => __('Next &raquo;', 'visit-thurman'),
-            ));
-            echo '</div>';
+            if (!$no_pagination) {
+                echo '<div class="vt-pagination">';
+                echo paginate_links(array(
+                    'total' => $query->max_num_pages,
+                    'current' => max(1, $args['paged']),
+                    'prev_text' => __('&laquo; Prev', 'visit-thurman'),
+                    'next_text' => __('Next &raquo;', 'visit-thurman'),
+                ));
+                echo '</div>';
+            }
 
         } else {
             echo '<p>' . __('No listings found.', 'visit-thurman') . '</p>';
         }
-        
+
         wp_reset_postdata();
         return ob_get_clean();
     }

@@ -51,14 +51,39 @@ class VT_TCA_Members {
     public static function render_meta_box($post) {
         wp_nonce_field('vt_save_tca_member_meta', 'vt_tca_member_meta_nonce');
         $fields = [
-            '_vt_role' => __('Role', 'visit-thurman'),
-            '_vt_years_active' => __('Years Active', 'visit-thurman'),
+            '_vt_role'                 => __('Role', 'visit-thurman'),
             '_vt_business_affiliation' => __('Business Affiliation', 'visit-thurman'),
+            '_vt_website'              => __('Website', 'visit-thurman'),
+            '_vt_phone'                => __('Phone', 'visit-thurman'),
+            '_vt_email'                => __('Email', 'visit-thurman'),
+            '_vt_address'              => __('Address', 'visit-thurman'),
+        ];
+
+        $socials = [
+            '_vt_facebook'  => __('Facebook URL', 'visit-thurman'),
+            '_vt_instagram' => __('Instagram URL', 'visit-thurman'),
+            '_vt_twitter'   => __('Twitter URL', 'visit-thurman'),
+            '_vt_linkedin'  => __('LinkedIn URL', 'visit-thurman'),
+            '_vt_tiktok'    => __('TikTok URL', 'visit-thurman'),
         ];
         echo '<div class="vt-meta-box">';
         foreach ($fields as $key => $label) {
             $value = get_post_meta($post->ID, $key, true);
-            echo '<div class="vt-field-group"><label for="' . esc_attr($key) . '">' . esc_html($label) . '</label><input type="text" id="' . esc_attr($key) . '" name="' . esc_attr($key) . '" value="' . esc_attr($value) . '" class="widefat"></div>';
+            $type = ($key === '_vt_email') ? 'email' : 'text';
+            if ($key === '_vt_website') $type = 'url';
+            echo '<div class="vt-field-group">';
+            echo '<label for="' . esc_attr($key) . '">' . esc_html($label) . '</label>';
+            echo '<input type="' . $type . '" id="' . esc_attr($key) . '" name="' . esc_attr($key) . '" value="' . esc_attr($value) . '" class="widefat">';
+            echo '</div>';
+        }
+
+        echo '<h4>' . __('Socials', 'visit-thurman') . '</h4>';
+        foreach ($socials as $key => $label) {
+            $value = get_post_meta($post->ID, $key, true);
+            echo '<div class="vt-field-group">';
+            echo '<label for="' . esc_attr($key) . '">' . esc_html($label) . '</label>';
+            echo '<input type="url" id="' . esc_attr($key) . '" name="' . esc_attr($key) . '" value="' . esc_attr($value) . '" class="widefat">';
+            echo '</div>';
         }
         echo '</div>';
     }
@@ -68,10 +93,21 @@ class VT_TCA_Members {
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
         if (!current_user_can('edit_post', $post_id)) return;
         
-        $fields = ['_vt_role', '_vt_years_active', '_vt_business_affiliation'];
+        $fields = [
+            '_vt_role','_vt_business_affiliation','_vt_website','_vt_phone','_vt_email','_vt_address',
+            '_vt_facebook','_vt_instagram','_vt_twitter','_vt_linkedin','_vt_tiktok'
+        ];
         foreach ($fields as $key) {
             if (isset($_POST[$key])) {
-                update_post_meta($post_id, $key, sanitize_text_field($_POST[$key]));
+                $value = sanitize_text_field($_POST[$key]);
+                $url_fields = ['_vt_website','_vt_facebook','_vt_instagram','_vt_twitter','_vt_linkedin','_vt_tiktok'];
+                if (in_array($key, $url_fields, true)) {
+                    $value = esc_url_raw($value);
+                }
+                if ($key === '_vt_email') {
+                    $value = sanitize_email($value);
+                }
+                update_post_meta($post_id, $key, $value);
             }
         }
     }

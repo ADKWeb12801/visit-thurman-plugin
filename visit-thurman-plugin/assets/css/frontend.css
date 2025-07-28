@@ -1,0 +1,331 @@
+/**
+ * Visit Thurman Plugin - Frontend Styles
+ * * Using .vt- prefix to avoid conflicts
+ * Mobile-first responsive design
+ * Brand colors: Primary Green #336633, Accent Orange #FF9933
+ */
+
+/* Base Variables */
+:root {
+    --vt-primary: #336633;
+    --vt-accent: #FF9933;
+    --vt-bg-light: #f9f9f9;
+    --vt-text-dark: #333333;
+    --vt-text-light: #666666;
+    --vt-border: #e0e0e0;
+    --vt-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --vt-shadow-hover: 0 4px 8px rgba(0, 0, 0, 0.15);
+    --vt-radius: 12px;
+    --vt-radius-lg: 16px;
+    --vt-transition: all 0.3s ease;
+}
+
+/* Typography */
+.vt-heading {
+    color: var(--vt-text-dark);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+}
+
+.vt-h1 { font-size: 2rem; }
+.vt-h2 { font-size: 1.75rem; }
+.vt-h3 { font-size: 1.5rem; }
+.vt-h4 { font-size: 1.25rem; }
+
+/* Container */
+.vt-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Grid System */
+.vt-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+    .vt-grid-2 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 768px) {
+    .vt-grid-3 { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 1024px) {
+    .vt-grid-4 { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* Cards */
+.vt-card {
+    background: white;
+    border-radius: var(--vt-radius-lg);
+    box-shadow: var(--vt-shadow);
+    overflow: hidden;
+    transition: var(--vt-transition);
+    display: flex;
+    flex-direction: column;
+}
+
+.vt-card:hover {
+    box-shadow: var(--vt-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.vt-card-image {
+    position: relative;
+    padding-top: 60%;
+    overflow: hidden;
+    background: var(--vt-bg-light);
+}
+
+.vt-card-image img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: var(--vt-transition);
+}
+
+.vt-card:hover .vt-card-image img {
+    transform: scale(1.05);
+}
+
+.vt-card-content {
+    padding: 1.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.vt-card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--vt-text-dark);
+    margin-bottom: 0.5rem;
+    line-height: 1.3;
+}
+
+.vt-card-title a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.vt-card-title a:hover {
+    color: var(--vt-primary);
+}
+
+.vt-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    color: var(--vt-text-light);
+}
+
+.vt-card-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.vt-card-meta-item svg,
+.vt-card-meta-item .dashicons {
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+}
+
+.vt-card-excerpt {
+    color: var(--vt-text-light);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    flex: 1;
+}
+
+.vt-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--vt-border);
+}
+
+/* Buttons */
+.vt-btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--vt-radius);
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--vt-transition);
+    cursor: pointer;
+    border: none;
+    font-size: 1rem;
+    line-height: 1;
+    text-align: center;
+}
+
+.vt-btn-primary {
+    background: var(--vt-primary);
+    color: white;
+}
+
+.vt-btn-primary:hover {
+    background: #2a542a;
+    transform: translateY(-1px);
+}
+
+.vt-btn-secondary {
+    background: var(--vt-accent);
+    color: white;
+}
+
+.vt-btn-secondary:hover {
+    background: #e68a2e;
+    transform: translateY(-1px);
+}
+
+/* Forms */
+.vt-form-group {
+    margin-bottom: 1.5rem;
+}
+
+.vt-label {
+    display: block;
+    font-weight: 600;
+    color: var(--vt-text-dark);
+    margin-bottom: 0.5rem;
+}
+
+.vt-input,
+.vt-textarea,
+.vt-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--vt-border);
+    border-radius: var(--vt-radius);
+    font-size: 1rem;
+    transition: var(--vt-transition);
+    background: white;
+}
+
+.vt-input:focus,
+.vt-textarea:focus,
+.vt-select:focus {
+    outline: none;
+    border-color: var(--vt-primary);
+    box-shadow: 0 0 0 3px rgba(51, 102, 51, 0.1);
+}
+
+/* User Profile */
+.vt-profile-header {
+    background: linear-gradient(135deg, var(--vt-primary), #2a542a);
+    color: white;
+    padding: 3rem 1rem;
+    margin-bottom: 2rem;
+    border-radius: var(--vt-radius-lg);
+}
+
+.vt-profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid white;
+}
+
+.vt-profile-tabs {
+    display: flex;
+    gap: 1rem;
+    border-bottom: 2px solid var(--vt-border);
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.vt-profile-tab {
+    padding: 1rem 0.5rem;
+    color: var(--vt-text-light);
+    text-decoration: none;
+    font-weight: 600;
+    position: relative;
+    transition: var(--vt-transition);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+.vt-profile-tab:hover {
+    color: var(--vt-primary);
+}
+
+.vt-profile-tab.is-active {
+    color: var(--vt-primary);
+    border-bottom-color: var(--vt-primary);
+}
+
+.vt-profile-tab-content {
+    display: none;
+}
+
+.vt-profile-tab-content.is-active {
+    display: block;
+}
+
+
+/* Bookmark Button */
+.vt-bookmark-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: var(--vt-transition);
+    color: var(--vt-text-light);
+}
+
+.vt-bookmark-btn svg {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+}
+
+.vt-bookmark-btn:hover {
+    color: var(--vt-accent);
+}
+
+.vt-bookmark-btn.is-bookmarked {
+    color: var(--vt-accent);
+}
+
+.vt-bookmark-btn.is-bookmarked svg {
+    fill: currentColor;
+}
+
+/* Alerts */
+.vt-alert {
+    padding: 1rem;
+    border-radius: var(--vt-radius);
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+}
+
+.vt-alert-info {
+    background: #dbeafe;
+    color: #1e40af;
+    border-color: #93c5fd;
+}
+
+/* Utility Classes */
+.vt-mt-4 { margin-top: 2rem; }
+.vt-mb-3 { margin-bottom: 1.5rem; }
+.vt-mb-4 { margin-bottom: 2rem; }
+.vt-flex { display: flex; }
+.vt-items-center { align-items: center; }
+.vt-gap-3 { gap: 1.5rem; }

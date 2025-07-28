@@ -1,0 +1,39 @@
+/**
+ * Visit Thurman Plugin - Admin Styles
+ */
+
+.vt-meta-box .vt-field-group {
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    background: #fdfdfd;
+}
+
+.vt-meta-box .vt-field-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.vt-meta-box .vt-field-group input[type="text"],
+.vt-meta-box .vt-field-group input[type="url"],
+.vt-meta-box .vt-field-group input[type="email"],
+.vt-meta-box .vt-field-group input[type="tel"],
+.vt-meta-box .vt-field-group input[type="date"],
+.vt-meta-box .vt-field-group input[type="time"],
+.vt-meta-box .vt-field-group textarea {
+    width: 100%;
+}
+
+/* Settings Page Tabs */
+.vt-admin-tabs .nav-tab-wrapper {
+    margin-bottom: 0;
+}
+
+.vt-tab-content {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-top: none;
+}

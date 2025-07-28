@@ -41,17 +41,33 @@ class VT_Shortcodes {
         }
 
         $atts = shortcode_atts(array(
-            'limit' => 12,
-            'columns' => 3,
+            'limit'    => 12,
+            'columns'  => 3,
+            'orderby'  => 'date',
+            'order'    => 'DESC',
+            'category' => '',
         ), $atts);
         
         $paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
         $args = array(
-            'post_type' => $post_type,
+            'post_type'      => $post_type,
             'posts_per_page' => intval($atts['limit']),
-            'post_status' => 'publish',
-            'paged' => $paged,
+            'post_status'    => 'publish',
+            'paged'          => $paged,
+            'orderby'        => sanitize_text_field($atts['orderby']),
+            'order'          => sanitize_text_field($atts['order']),
         );
+
+        if (!empty($atts['category'])) {
+            $taxonomy = $post_type . '_category';
+            if (taxonomy_exists($taxonomy)) {
+                $args['tax_query'] = array([
+                    'taxonomy' => $taxonomy,
+                    'field'    => 'slug',
+                    'terms'    => sanitize_title($atts['category'])
+                ]);
+            }
+        }
         
         $query = new WP_Query($args);
         
@@ -248,10 +264,33 @@ class VT_Shortcodes {
         return ob_get_clean();
     }
 
-    public static function user_dashboard_shortcode() { 
-        return '<div class="vt-alert vt-alert-info">' . __('User dashboard is under construction.', 'visit-thurman') . '</div>'; 
+    public static function user_dashboard_shortcode() {
+        if (!is_user_logged_in()) {
+            return '<div class="vt-alert vt-alert-info">' . sprintf(__('Please <a href="%s">log in</a> to view your dashboard.', 'visit-thurman'), esc_url(wp_login_url(get_permalink()))) . '</div>';
+        }
+
+        $claims = VT_Claim_Listings::get_claims_for_user(get_current_user_id());
+
+        ob_start();
+        echo '<div class="vt-container">';
+        echo '<h2>' . __('My Claims', 'visit-thurman') . '</h2>';
+        if ($claims) {
+            echo '<ul class="vt-list">';
+            foreach ($claims as $claim) {
+                $title = get_the_title($claim->post_id);
+                $status = ucfirst($claim->status);
+                echo '<li>' . esc_html($title) . ' - ' . esc_html($status) . '</li>';
+            }
+            echo '</ul>';
+        } else {
+            echo '<p>' . __('You have no claim requests.', 'visit-thurman') . '</p>';
+        }
+        echo '</div>';
+        return ob_get_clean();
     }
-    public static function claim_listing_shortcode() { 
-        return '<div class="vt-alert vt-alert-info">' . __('Claim listing functionality is under construction.', 'visit-thurman') . '</div>'; 
+
+    public static function claim_listing_shortcode($atts) {
+        $atts = shortcode_atts(['post_id' => get_the_ID()], $atts);
+        return VT_Claim_Listings::render_claim_button(intval($atts['post_id']));
     }
 }

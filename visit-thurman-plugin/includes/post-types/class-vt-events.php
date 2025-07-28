@@ -124,6 +124,13 @@ if (!class_exists('VT_Events')) {
                     update_post_meta($post_id, $field, $value);
                 }
             }
+
+            $start = isset($_POST['_vt_start_date']) ? sanitize_text_field($_POST['_vt_start_date']) : '';
+            if ($start && $start < current_time('Y-m-d')) {
+                add_action('admin_notices', function() {
+                    echo '<div class="notice notice-warning"><p>' . esc_html__('Event start date is in the past.', 'visit-thurman') . '</p></div>';
+                });
+            }
         }
     }
 }

@@ -60,6 +60,13 @@ class VT_Claim_Listings {
             'status'     => 'pending',
             'created_at' => current_time('mysql'),
         ), array('%d','%d','%s','%s'));
+
+        $admin_email = get_option('admin_email');
+        if ($admin_email) {
+            $subject = sprintf(__('New claim request for %s', 'visit-thurman'), get_the_title($post_id));
+            $message = sprintf(__('User %s has requested to claim the listing "%s".', 'visit-thurman'), wp_get_current_user()->user_email, get_permalink($post_id));
+            wp_mail($admin_email, $subject, $message);
+        }
     }
 
     public static function render_claim_button($post_id = null) {

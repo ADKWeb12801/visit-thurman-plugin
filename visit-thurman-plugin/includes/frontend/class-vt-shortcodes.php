@@ -6,6 +6,7 @@
 
 if (!defined('ABSPATH')) exit;
 
+if ( ! class_exists( 'VT_Claim_Listings' ) ) {
 class VT_Claim_Listings {
     private static $instance;
 
@@ -100,5 +101,6 @@ class VT_Claim_Listings {
             <button type="submit" class="vt-button">' . __('Claim This Listing', 'visit-thurman') . '</button>
         </form>';
     }
+}
 }
 

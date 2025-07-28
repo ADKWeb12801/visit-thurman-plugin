@@ -69,6 +69,7 @@ final class VisitThurmanPlugin {
         
         if (is_admin()) {
             VT_Admin::get_instance();
+            VT_Claims_Admin::get_instance();
         }
     }
 
@@ -103,6 +104,7 @@ final class VisitThurmanPlugin {
         if (is_admin()) {
             require_once VT_PLUGIN_PATH . 'includes/admin/class-vt-admin.php';
             require_once VT_PLUGIN_PATH . 'includes/admin/class-vt-admin-settings.php';
+            require_once VT_PLUGIN_PATH . 'includes/admin/class-vt-claims-admin.php';
         }
     }
     

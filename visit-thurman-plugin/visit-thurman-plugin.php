@@ -39,6 +39,7 @@ final class VisitThurmanPlugin {
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
         add_action('plugins_loaded', array($this, 'init'));
+        add_action('init', array($this, 'maybe_flush_rewrite'), 99);
     }
 
     public function init() {
@@ -123,10 +124,30 @@ final class VisitThurmanPlugin {
 
         VT_Database::create_tables();
         flush_rewrite_rules();
+        update_option('vt_plugin_version', VT_VERSION);
     }
     
     public function deactivate() {
         flush_rewrite_rules();
+    }
+
+    public function maybe_flush_rewrite() {
+        $version = get_option('vt_plugin_version');
+        if ($version !== VT_VERSION) {
+            // Ensure post types are registered before flushing
+            VT_Events::register_post_type();
+            VT_Events::register_taxonomies();
+            VT_Businesses::register_post_type();
+            VT_Businesses::register_taxonomies();
+            VT_Accommodations::register_post_type();
+            VT_Accommodations::register_taxonomies();
+            VT_TCA_Members::register_post_type();
+            VT_Organizers::register_post_type();
+            VT_Venues::register_post_type();
+
+            flush_rewrite_rules();
+            update_option('vt_plugin_version', VT_VERSION);
+        }
     }
     
     public function enqueue_frontend_assets() {

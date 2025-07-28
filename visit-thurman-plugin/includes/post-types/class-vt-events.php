@@ -70,6 +70,7 @@ if (!class_exists('VT_Events')) {
         
         public static function render_event_details_meta_box($post) {
             wp_nonce_field('vt_save_event_meta', 'vt_event_meta_nonce');
+
             $fields = [
                 '_vt_start_date'    => __('Event Start Date', 'visit-thurman'),
                 '_vt_end_date'      => __('Event End Date', 'visit-thurman'),
@@ -85,8 +86,8 @@ if (!class_exists('VT_Events')) {
             echo '<div class="vt-meta-box">';
             foreach ($fields as $key => $label) {
                 $value = get_post_meta($post->ID, $key, true);
-                echo '<p><label for="' . esc_attr($key) . '">' . esc_html($label) . '</label><br/>';
                 $type = ($key === '_vt_start_date' || $key === '_vt_end_date') ? 'date' : 'text';
+                echo '<p><label for="' . esc_attr($key) . '">' . esc_html($label) . '</label><br/>';
                 echo '<input type="' . $type . '" id="' . esc_attr($key) . '" name="' . esc_attr($key) . '" value="' . esc_attr($value) . '" class="widefat"/></p>';
             }
 
@@ -117,12 +118,30 @@ if (!class_exists('VT_Events')) {
             if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
             if (!current_user_can('edit_post', $post_id)) return;
 
-            $fields = ['_vt_start_date','_vt_end_date','_vt_time','_vt_location_name','_vt_address','_vt_website','_vt_organizer_id','_vt_venue_id'];
+            $fields = [
+                '_vt_start_date',
+                '_vt_end_date',
+                '_vt_time',
+                '_vt_location_name',
+                '_vt_address',
+                '_vt_website',
+                '_vt_organizer_id',
+                '_vt_venue_id',
+            ];
+
             foreach ($fields as $field) {
                 if (isset($_POST[$field])) {
                     $value = sanitize_text_field($_POST[$field]);
                     update_post_meta($post_id, $field, $value);
                 }
+            }
+
+            // Warn if the event date is in the past
+            $start = isset($_POST['_vt_start_date']) ? sanitize_text_field($_POST['_vt_start_date']) : '';
+            if ($start && $start < current_time('Y-m-d')) {
+                add_action('admin_notices', function () {
+                    echo '<div class="notice notice-warning"><p>' . esc_html__('Event start date is in the past.', 'visit-thurman') . '</p></div>';
+                });
             }
         }
     }

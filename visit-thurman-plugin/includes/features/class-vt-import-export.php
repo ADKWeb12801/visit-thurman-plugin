@@ -325,41 +325,34 @@ class VT_Import_Export {
      * Get CSV headers
      */
     private function get_csv_headers($post_type) {
-        $headers = array('ID', 'Title', 'Content', 'Excerpt', 'Status', 'Author', 'Date');
+        $headers = array('ID', 'Title', 'Content', 'Excerpt', 'Status', 'Author', 'Date', 'Featured Image');
         
         switch ($post_type) {
             case VT_Events::POST_TYPE:
                 $headers = array_merge($headers, array(
-                    'Start Date', 'Start Time', 'End Date', 'End Time',
-                    'Venue', 'Address', 'City', 'State', 'ZIP',
-                    'Online Event', 'Online URL', 'Cost',
-                    'Organizer', 'Organizer Email', 'Organizer Phone',
-                    'Registration URL', 'Categories', 'Tags'
+                    'Start Date', 'End Date', 'Time', 'Location Name', 'Address',
+                    'Organizer', 'Venue', 'Website', 'Categories', 'Tags'
                 ));
                 break;
                 
             case VT_Businesses::POST_TYPE:
                 $headers = array_merge($headers, array(
-                    'Services', 'Website', 'Phone', 'Email',
-                    'Address', 'City', 'State', 'ZIP',
-                    'Hours', 'Social Media', 'Categories', 'Tags'
+                    'Services', 'Website', 'Phone', 'Email', 'Address', 'Hours',
+                    'Facebook', 'Instagram', 'Twitter', 'LinkedIn', 'TikTok',
+                    'Categories', 'Tags'
                 ));
                 break;
                 
             case VT_Accommodations::POST_TYPE:
                 $headers = array_merge($headers, array(
-                    'Type', 'Beds', 'Max Guests', 'Bathrooms',
-                    'Amenities', 'Rates', 'Minimum Stay',
-                    'Address', 'City', 'State', 'ZIP',
-                    'Booking URL', 'Contact Email', 'Contact Phone',
-                    'Categories', 'Tags'
+                    'Website', 'Address', 'Categories', 'Tags'
                 ));
                 break;
                 
             case VT_TCA_Members::POST_TYPE:
                 $headers = array_merge($headers, array(
-                    'Role', 'Years Active', 'Business Affiliation',
-                    'Email', 'Phone', 'Website',
+                    'Role', 'Business Affiliation', 'Website', 'Phone', 'Email', 'Address',
+                    'Facebook', 'Instagram', 'Twitter', 'LinkedIn', 'TikTok',
                     'Categories', 'Tags'
                 ));
                 break;
@@ -380,27 +373,20 @@ class VT_Import_Export {
             $post->post_status,
             get_the_author_meta('display_name', $post->post_author),
             $post->post_date,
+            get_the_post_thumbnail_url($post->ID, 'full'),
         );
         
         switch ($post_type) {
             case VT_Events::POST_TYPE:
                 $row = array_merge($row, array(
-                    get_post_meta($post->ID, '_vt_event_start_date', true),
-                    get_post_meta($post->ID, '_vt_event_start_time', true),
-                    get_post_meta($post->ID, '_vt_event_end_date', true),
-                    get_post_meta($post->ID, '_vt_event_end_time', true),
-                    get_post_meta($post->ID, '_vt_event_venue', true),
-                    get_post_meta($post->ID, '_vt_event_address', true),
-                    get_post_meta($post->ID, '_vt_event_city', true),
-                    get_post_meta($post->ID, '_vt_event_state', true),
-                    get_post_meta($post->ID, '_vt_event_zip', true),
-                    get_post_meta($post->ID, '_vt_event_online', true) ? 'Yes' : 'No',
-                    get_post_meta($post->ID, '_vt_event_online_url', true),
-                    get_post_meta($post->ID, '_vt_event_cost', true),
-                    get_post_meta($post->ID, '_vt_event_organizer', true),
-                    get_post_meta($post->ID, '_vt_event_organizer_email', true),
-                    get_post_meta($post->ID, '_vt_event_organizer_phone', true),
-                    get_post_meta($post->ID, '_vt_event_registration_url', true),
+                    get_post_meta($post->ID, '_vt_start_date', true),
+                    get_post_meta($post->ID, '_vt_end_date', true),
+                    get_post_meta($post->ID, '_vt_time', true),
+                    get_post_meta($post->ID, '_vt_location_name', true),
+                    get_post_meta($post->ID, '_vt_address', true),
+                    get_post_meta($post->ID, '_vt_organizer_id', true),
+                    get_post_meta($post->ID, '_vt_venue_id', true),
+                    get_post_meta($post->ID, '_vt_website', true),
                     $this->get_terms_string($post->ID, 'vt_event_category'),
                     $this->get_terms_string($post->ID, 'vt_event_tag'),
                 ));
@@ -408,16 +394,17 @@ class VT_Import_Export {
                 
             case VT_Businesses::POST_TYPE:
                 $row = array_merge($row, array(
-                    get_post_meta($post->ID, '_vt_business_services', true),
-                    get_post_meta($post->ID, '_vt_business_website', true),
-                    get_post_meta($post->ID, '_vt_business_phone', true),
-                    get_post_meta($post->ID, '_vt_business_email', true),
-                    get_post_meta($post->ID, '_vt_business_address', true),
-                    get_post_meta($post->ID, '_vt_business_city', true),
-                    get_post_meta($post->ID, '_vt_business_state', true),
-                    get_post_meta($post->ID, '_vt_business_zip', true),
-                    get_post_meta($post->ID, '_vt_business_hours', true),
-                    get_post_meta($post->ID, '_vt_business_social', true),
+                    get_post_meta($post->ID, '_vt_services', true),
+                    get_post_meta($post->ID, '_vt_website', true),
+                    get_post_meta($post->ID, '_vt_phone', true),
+                    get_post_meta($post->ID, '_vt_email', true),
+                    get_post_meta($post->ID, '_vt_address', true),
+                    get_post_meta($post->ID, '_vt_hours', true),
+                    get_post_meta($post->ID, '_vt_facebook', true),
+                    get_post_meta($post->ID, '_vt_instagram', true),
+                    get_post_meta($post->ID, '_vt_twitter', true),
+                    get_post_meta($post->ID, '_vt_linkedin', true),
+                    get_post_meta($post->ID, '_vt_tiktok', true),
                     $this->get_terms_string($post->ID, 'vt_business_category'),
                     $this->get_terms_string($post->ID, 'vt_business_tag'),
                 ));
@@ -425,20 +412,8 @@ class VT_Import_Export {
                 
             case VT_Accommodations::POST_TYPE:
                 $row = array_merge($row, array(
-                    get_post_meta($post->ID, '_vt_accommodation_type', true),
-                    get_post_meta($post->ID, '_vt_accommodation_beds', true),
-                    get_post_meta($post->ID, '_vt_accommodation_max_guests', true),
-                    get_post_meta($post->ID, '_vt_accommodation_bathrooms', true),
-                    implode(', ', (array) get_post_meta($post->ID, '_vt_accommodation_amenities', true)),
-                    get_post_meta($post->ID, '_vt_accommodation_rates', true),
-                    get_post_meta($post->ID, '_vt_accommodation_min_stay', true),
-                    get_post_meta($post->ID, '_vt_accommodation_address', true),
-                    get_post_meta($post->ID, '_vt_accommodation_city', true),
-                    get_post_meta($post->ID, '_vt_accommodation_state', true),
-                    get_post_meta($post->ID, '_vt_accommodation_zip', true),
-                    get_post_meta($post->ID, '_vt_accommodation_booking_url', true),
-                    get_post_meta($post->ID, '_vt_accommodation_email', true),
-                    get_post_meta($post->ID, '_vt_accommodation_phone', true),
+                    get_post_meta($post->ID, '_vt_website', true),
+                    get_post_meta($post->ID, '_vt_address', true),
                     $this->get_terms_string($post->ID, 'vt_accommodation_category'),
                     $this->get_terms_string($post->ID, 'vt_accommodation_tag'),
                 ));
@@ -446,14 +421,19 @@ class VT_Import_Export {
                 
             case VT_TCA_Members::POST_TYPE:
                 $row = array_merge($row, array(
-                    get_post_meta($post->ID, '_vt_member_role', true),
-                    get_post_meta($post->ID, '_vt_member_years_active', true),
-                    get_post_meta($post->ID, '_vt_member_business', true),
-                    get_post_meta($post->ID, '_vt_member_email', true),
-                    get_post_meta($post->ID, '_vt_member_phone', true),
-                    get_post_meta($post->ID, '_vt_member_website', true),
-                    $this->get_terms_string($post->ID, 'vt_member_category'),
-                    $this->get_terms_string($post->ID, 'vt_member_tag'),
+                    get_post_meta($post->ID, '_vt_role', true),
+                    get_post_meta($post->ID, '_vt_business_affiliation', true),
+                    get_post_meta($post->ID, '_vt_website', true),
+                    get_post_meta($post->ID, '_vt_phone', true),
+                    get_post_meta($post->ID, '_vt_email', true),
+                    get_post_meta($post->ID, '_vt_address', true),
+                    get_post_meta($post->ID, '_vt_facebook', true),
+                    get_post_meta($post->ID, '_vt_instagram', true),
+                    get_post_meta($post->ID, '_vt_twitter', true),
+                    get_post_meta($post->ID, '_vt_linkedin', true),
+                    get_post_meta($post->ID, '_vt_tiktok', true),
+                    $this->get_terms_string($post->ID, 'vt_tca_member_category'),
+                    $this->get_terms_string($post->ID, 'vt_tca_member_tag'),
                 ));
                 break;
         }
@@ -641,10 +621,22 @@ class VT_Import_Export {
         
         // Import meta data
         $this->import_post_meta($post_id, $data, $post_type);
-        
+
         // Import taxonomies
         $this->import_post_taxonomies($post_id, $data, $post_type);
-        
+
+        // Set featured image if provided
+        $image_url = $data['Featured Image'] ?? $data['featured_image'] ?? '';
+        if ($image_url) {
+            include_once ABSPATH . 'wp-admin/includes/file.php';
+            include_once ABSPATH . 'wp-admin/includes/media.php';
+            include_once ABSPATH . 'wp-admin/includes/image.php';
+            $image_id = media_sideload_image(esc_url_raw($image_url), $post_id, null, 'id');
+            if (!is_wp_error($image_id)) {
+                set_post_thumbnail($post_id, $image_id);
+            }
+        }
+
         return true;
     }
     
@@ -656,30 +648,55 @@ class VT_Import_Export {
         switch ($post_type) {
             case VT_Events::POST_TYPE:
                 $meta_map = array(
-                    'Start Date' => '_vt_event_start_date',
-                    'Start Time' => '_vt_event_start_time',
-                    'End Date' => '_vt_event_end_date',
-                    'End Time' => '_vt_event_end_time',
-                    'Venue' => '_vt_event_venue',
-                    'Address' => '_vt_event_address',
-                    'City' => '_vt_event_city',
-                    'State' => '_vt_event_state',
-                    'ZIP' => '_vt_event_zip',
-                    'Online URL' => '_vt_event_online_url',
-                    'Cost' => '_vt_event_cost',
-                    'Organizer' => '_vt_event_organizer',
-                    'Organizer Email' => '_vt_event_organizer_email',
-                    'Organizer Phone' => '_vt_event_organizer_phone',
-                    'Registration URL' => '_vt_event_registration_url',
+                    'Start Date'   => '_vt_start_date',
+                    'End Date'     => '_vt_end_date',
+                    'Time'         => '_vt_time',
+                    'Location Name'=> '_vt_location_name',
+                    'Address'      => '_vt_address',
+                    'Organizer'    => '_vt_organizer_id',
+                    'Venue'        => '_vt_venue_id',
+                    'Website'      => '_vt_website',
                 );
-                
-                // Handle online event checkbox
-                if (isset($data['Online Event'])) {
-                    update_post_meta($post_id, '_vt_event_online', $data['Online Event'] === 'Yes' ? '1' : '0');
-                }
                 break;
-                
-            // Add other post type mappings...
+
+            case VT_Businesses::POST_TYPE:
+                $meta_map = array(
+                    'Services'  => '_vt_services',
+                    'Website'   => '_vt_website',
+                    'Phone'     => '_vt_phone',
+                    'Email'     => '_vt_email',
+                    'Address'   => '_vt_address',
+                    'Hours'     => '_vt_hours',
+                    'Facebook'  => '_vt_facebook',
+                    'Instagram' => '_vt_instagram',
+                    'Twitter'   => '_vt_twitter',
+                    'LinkedIn'  => '_vt_linkedin',
+                    'TikTok'    => '_vt_tiktok',
+                );
+                break;
+
+            case VT_Accommodations::POST_TYPE:
+                $meta_map = array(
+                    'Website' => '_vt_website',
+                    'Address' => '_vt_address',
+                );
+                break;
+
+            case VT_TCA_Members::POST_TYPE:
+                $meta_map = array(
+                    'Role'               => '_vt_role',
+                    'Business Affiliation'=> '_vt_business_affiliation',
+                    'Website'            => '_vt_website',
+                    'Phone'              => '_vt_phone',
+                    'Email'              => '_vt_email',
+                    'Address'            => '_vt_address',
+                    'Facebook'           => '_vt_facebook',
+                    'Instagram'          => '_vt_instagram',
+                    'Twitter'            => '_vt_twitter',
+                    'LinkedIn'           => '_vt_linkedin',
+                    'TikTok'             => '_vt_tiktok',
+                );
+                break;
         }
         
         // Apply meta mappings
@@ -707,9 +724,20 @@ class VT_Import_Export {
         $taxonomy_map = array(
             VT_Events::POST_TYPE => array(
                 'Categories' => 'vt_event_category',
-                'Tags' => 'vt_event_tag',
+                'Tags'       => 'vt_event_tag',
             ),
-            // Add other post types...
+            VT_Businesses::POST_TYPE => array(
+                'Categories' => 'vt_business_category',
+                'Tags'       => 'vt_business_tag',
+            ),
+            VT_Accommodations::POST_TYPE => array(
+                'Categories' => 'vt_accommodation_category',
+                'Tags'       => 'vt_accommodation_tag',
+            ),
+            VT_TCA_Members::POST_TYPE => array(
+                'Categories' => 'vt_tca_member_category',
+                'Tags'       => 'vt_tca_member_tag',
+            ),
         );
         
         if (isset($taxonomy_map[$post_type])) {

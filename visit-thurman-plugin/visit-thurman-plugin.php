@@ -3,7 +3,7 @@
  * Plugin Name: Visit Thurman Listings & Community Hub
  * Plugin URI: https://visitthurman.com
  * Description: A modular WordPress plugin for managing events, businesses, accommodations, and TCA members with social features.
- * Version: 1.4.0
+ * Version: 2.0.0
  * Author: Visit Thurman Development Team
  * License: GPL v2 or later
  * Text Domain: visit-thurman
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('VT_VERSION', '1.4.0');
+define('VT_VERSION', '2.0.0');
 define('VT_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('VT_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('VT_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -39,6 +39,7 @@ final class VisitThurmanPlugin {
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
         add_action('plugins_loaded', array($this, 'init'));
+        add_action('init', array($this, 'maybe_flush_rewrite'), 99);
     }
 
     public function init() {
@@ -69,6 +70,7 @@ final class VisitThurmanPlugin {
         
         if (is_admin()) {
             VT_Admin::get_instance();
+            VT_Claims_Admin::get_instance();
         }
     }
 
@@ -103,17 +105,49 @@ final class VisitThurmanPlugin {
         if (is_admin()) {
             require_once VT_PLUGIN_PATH . 'includes/admin/class-vt-admin.php';
             require_once VT_PLUGIN_PATH . 'includes/admin/class-vt-admin-settings.php';
+            require_once VT_PLUGIN_PATH . 'includes/admin/class-vt-claims-admin.php';
         }
     }
     
     public function activate() {
         $this->load_dependencies();
+        // Register post types for rewrite rules on activation
+        VT_Events::register_post_type();
+        VT_Events::register_taxonomies();
+        VT_Businesses::register_post_type();
+        VT_Businesses::register_taxonomies();
+        VT_Accommodations::register_post_type();
+        VT_Accommodations::register_taxonomies();
+        VT_TCA_Members::register_post_type();
+        VT_Organizers::register_post_type();
+        VT_Venues::register_post_type();
+
         VT_Database::create_tables();
         flush_rewrite_rules();
+        update_option('vt_plugin_version', VT_VERSION);
     }
     
     public function deactivate() {
         flush_rewrite_rules();
+    }
+
+    public function maybe_flush_rewrite() {
+        $version = get_option('vt_plugin_version');
+        if ($version !== VT_VERSION) {
+            // Ensure post types are registered before flushing
+            VT_Events::register_post_type();
+            VT_Events::register_taxonomies();
+            VT_Businesses::register_post_type();
+            VT_Businesses::register_taxonomies();
+            VT_Accommodations::register_post_type();
+            VT_Accommodations::register_taxonomies();
+            VT_TCA_Members::register_post_type();
+            VT_Organizers::register_post_type();
+            VT_Venues::register_post_type();
+
+            flush_rewrite_rules();
+            update_option('vt_plugin_version', VT_VERSION);
+        }
     }
     
     public function enqueue_frontend_assets() {

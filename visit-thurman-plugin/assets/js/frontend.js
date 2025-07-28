@@ -87,4 +87,21 @@ jQuery(document).ready(function($) {
     handleBookmarkToggle();
     handleProfileTabs();
 
+    /**
+     * AJAX listing filters
+     */
+    $(document).on('submit', '.vt-listing-filters', function(e){
+        e.preventDefault();
+        const form = $(this);
+        const target = $(form.data('target'));
+        const data = form.serializeArray();
+        data.push({name:'action', value:'vt_fetch_listings'});
+        data.push({name:'nonce', value:vt_ajax.nonce});
+        $.post(vt_ajax.ajax_url, data, function(response){
+            if(response.success){
+                target.html(response.data.html);
+            }
+        });
+    });
+
 });

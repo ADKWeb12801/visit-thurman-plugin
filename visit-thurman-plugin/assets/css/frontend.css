@@ -329,3 +329,6 @@
 .vt-flex { display: flex; }
 .vt-items-center { align-items: center; }
 .vt-gap-3 { gap: 1.5rem; }
+.vt-listing-filters { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:1rem; }
+.vt-listing-filters input,
+.vt-listing-filters select { padding:0.5rem; }

@@ -36,6 +36,9 @@ class VT_Ajax_Handler {
     /**
      * Toggle bookmark for a post via AJAX.
      * Checks user capability and validates input.
+     *
+     * @action vt_before_toggle_bookmark (int $post_id, int $user_id, bool $is_bookmarked)
+     * @action vt_after_toggle_bookmark (int $post_id, int $user_id, string $action, bool $result)
      */
     public function toggle_bookmark() {
         check_ajax_referer('vt_ajax_nonce', 'nonce');
@@ -60,6 +63,15 @@ class VT_Ajax_Handler {
 
         $is_bookmarked = VT_Bookmarks::user_has_bookmark($post_id, $user_id);
 
+        /**
+         * Fires before toggling a bookmark.
+         *
+         * @param int $post_id
+         * @param int $user_id
+         * @param bool $is_bookmarked
+         */
+        do_action('vt_before_toggle_bookmark', $post_id, $user_id, $is_bookmarked);
+
         if ($is_bookmarked) {
             $deleted = $wpdb->query(
                 $wpdb->prepare(
@@ -68,6 +80,15 @@ class VT_Ajax_Handler {
                     $post_id
                 )
             );
+            /**
+             * Fires after toggling a bookmark (removal).
+             *
+             * @param int $post_id
+             * @param int $user_id
+             * @param string $action
+             * @param bool $result
+             */
+            do_action('vt_after_toggle_bookmark', $post_id, $user_id, 'removed', $deleted !== false);
             if ($deleted !== false) {
                 wp_send_json_success(['status' => 'removed']);
             } else {
@@ -83,6 +104,15 @@ class VT_Ajax_Handler {
                 ],
                 ['%d', '%d', '%s']
             );
+            /**
+             * Fires after toggling a bookmark (addition).
+             *
+             * @param int $post_id
+             * @param int $user_id
+             * @param string $action
+             * @param bool $result
+             */
+            do_action('vt_after_toggle_bookmark', $post_id, $user_id, 'added', (bool)$inserted);
             if ($inserted) {
                 wp_send_json_success(['status' => 'added']);
             } else {
@@ -94,18 +124,23 @@ class VT_Ajax_Handler {
     /**
      * Fetch listings via AJAX.
      * Validates and sanitizes all input.
+     *
+     * @filter vt_fetch_listings_args (array $args, array $raw_input)
+     * @action vt_before_fetch_listings (array $args)
+     * @action vt_after_fetch_listings (array $args, string $html)
      */
     public function fetch_listings() {
         check_ajax_referer('vt_ajax_nonce', 'nonce');
 
-        $post_type = isset($_POST['post_type']) ? sanitize_key($_POST['post_type']) : '';
-        $limit     = isset($_POST['limit']) ? intval($_POST['limit']) : 12;
-        $columns   = isset($_POST['columns']) ? intval($_POST['columns']) : 3;
-        $orderby   = isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'date';
-        $order     = isset($_POST['order']) ? sanitize_text_field($_POST['order']) : 'DESC';
-        $search    = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
-        $category  = isset($_POST['category']) ? sanitize_text_field($_POST['category']) : '';
-        $paged     = isset($_POST['page']) ? intval($_POST['page']) : 1;
+        $raw_input = $_POST;
+        $post_type = isset($raw_input['post_type']) ? sanitize_key($raw_input['post_type']) : '';
+        $limit     = isset($raw_input['limit']) ? intval($raw_input['limit']) : 12;
+        $columns   = isset($raw_input['columns']) ? intval($raw_input['columns']) : 3;
+        $orderby   = isset($raw_input['orderby']) ? sanitize_text_field($raw_input['orderby']) : 'date';
+        $order     = isset($raw_input['order']) ? sanitize_text_field($raw_input['order']) : 'DESC';
+        $search    = isset($raw_input['search']) ? sanitize_text_field($raw_input['search']) : '';
+        $category  = isset($raw_input['category']) ? sanitize_text_field($raw_input['category']) : '';
+        $paged     = isset($raw_input['page']) ? intval($raw_input['page']) : 1;
 
         if (!$post_type || !post_type_exists($post_type)) {
             wp_send_json_error(['message' => __('Invalid or missing post type.', 'visit-thurman')]);
@@ -131,7 +166,31 @@ class VT_Ajax_Handler {
             }
         }
 
+        /**
+         * Filter the query args before fetching listings.
+         *
+         * @param array $args
+         * @param array $raw_input
+         */
+        $args = apply_filters('vt_fetch_listings_args', $args, $raw_input);
+
+        /**
+         * Fires before fetching listings.
+         *
+         * @param array $args
+         */
+        do_action('vt_before_fetch_listings', $args);
+
         $html = VT_Shortcodes::render_listings($args, $columns, true);
+
+        /**
+         * Fires after fetching listings.
+         *
+         * @param array $args
+         * @param string $html
+         */
+        do_action('vt_after_fetch_listings', $args, $html);
+
         if ($html) {
             wp_send_json_success(['html' => $html]);
         } else {

@@ -50,6 +50,8 @@ final class VisitThurmanPlugin {
         VT_Businesses::register();
         VT_Accommodations::register();
         VT_TCA_Members::register();
+        VT_Organizers::register();
+        VT_Venues::register();
         VT_Shortcodes::register();
 
         add_action('rest_api_init', array('VT_REST_API', 'register_routes'));
@@ -81,6 +83,8 @@ final class VisitThurmanPlugin {
         require_once VT_PLUGIN_PATH . 'includes/post-types/class-vt-businesses.php';
         require_once VT_PLUGIN_PATH . 'includes/post-types/class-vt-accommodations.php';
         require_once VT_PLUGIN_PATH . 'includes/post-types/class-vt-tca-members.php';
+        require_once VT_PLUGIN_PATH . 'includes/post-types/class-vt-organizers.php';
+        require_once VT_PLUGIN_PATH . 'includes/post-types/class-vt-venues.php';
         
         // Features (Using the standardized 'class-vt-' prefix for all files)
         require_once VT_PLUGIN_PATH . 'includes/features/class-vt-user-profiles.php';

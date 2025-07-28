@@ -15,6 +15,9 @@ class VT_Shortcodes {
         foreach ($post_types as $pt) {
             add_shortcode('vt_' . $pt, array(__CLASS__, 'render_listing_shortcode'));
         }
+
+        add_shortcode('vt_next_events', array(__CLASS__, 'next_events_shortcode'));
+        add_shortcode('vt_upcoming_events', array(__CLASS__, 'upcoming_events_shortcode'));
         
         add_shortcode('vt_user_profile', array(__CLASS__, 'user_profile_shortcode'));
         add_shortcode('vt_user_dashboard', array(__CLASS__, 'user_dashboard_shortcode'));
@@ -170,6 +173,79 @@ class VT_Shortcodes {
             esc_attr($post_id),
             esc_attr($title)
         );
+    }
+
+    public static function next_events_shortcode($atts) {
+        $atts = shortcode_atts(['limit' => 3], $atts);
+        $args = [
+            'post_type' => VT_Events::POST_TYPE,
+            'posts_per_page' => intval($atts['limit']),
+            'meta_key' => '_vt_start_date',
+            'orderby' => 'meta_value',
+            'order' => 'ASC',
+            'meta_query' => [
+                [
+                    'key' => '_vt_start_date',
+                    'value' => current_time('Y-m-d'),
+                    'compare' => '>=',
+                    'type' => 'DATE'
+                ]
+            ]
+        ];
+        $query = new WP_Query($args);
+        ob_start();
+        if ($query->have_posts()) {
+            echo '<div class="vt-grid vt-grid-1">';
+            while ($query->have_posts()) {
+                $query->the_post();
+                self::render_card(get_the_ID());
+            }
+            echo '</div>';
+        }
+        wp_reset_postdata();
+        return ob_get_clean();
+    }
+
+    public static function upcoming_events_shortcode($atts) {
+        $atts = shortcode_atts(['category' => '', 'limit' => 6], $atts);
+        $tax_query = [];
+        if (!empty($atts['category'])) {
+            $tax_query[] = [
+                'taxonomy' => 'vt_event_category',
+                'field' => 'slug',
+                'terms' => sanitize_title($atts['category'])
+            ];
+        }
+
+        $args = [
+            'post_type' => VT_Events::POST_TYPE,
+            'posts_per_page' => intval($atts['limit']),
+            'meta_key' => '_vt_start_date',
+            'orderby' => 'meta_value',
+            'order' => 'ASC',
+            'tax_query' => $tax_query,
+            'meta_query' => [
+                [
+                    'key' => '_vt_start_date',
+                    'value' => current_time('Y-m-d'),
+                    'compare' => '>=',
+                    'type' => 'DATE'
+                ]
+            ]
+        ];
+
+        $query = new WP_Query($args);
+        ob_start();
+        if ($query->have_posts()) {
+            echo '<div class="vt-grid vt-grid-3">';
+            while ($query->have_posts()) {
+                $query->the_post();
+                self::render_card(get_the_ID());
+            }
+            echo '</div>';
+        }
+        wp_reset_postdata();
+        return ob_get_clean();
     }
 
     public static function user_dashboard_shortcode() { 

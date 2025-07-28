@@ -3,7 +3,7 @@
  * Plugin Name: Visit Thurman Listings & Community Hub
  * Plugin URI: https://visitthurman.com
  * Description: A modular WordPress plugin for managing events, businesses, accommodations, and TCA members with social features.
- * Version: 1.1.0
+ * Version: 1.3.0
  * Author: Visit Thurman Development Team
  * License: GPL v2 or later
  * Text Domain: visit-thurman
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('VT_VERSION', '1.1.0');
+define('VT_VERSION', '1.3.0');
 define('VT_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('VT_PLUGIN_PATH', plugin_dir_path(__FILE__));
 define('VT_PLUGIN_BASENAME', plugin_basename(__FILE__));
@@ -82,14 +82,14 @@ final class VisitThurmanPlugin {
         require_once VT_PLUGIN_PATH . 'includes/post-types/class-vt-accommodations.php';
         require_once VT_PLUGIN_PATH . 'includes/post-types/class-vt-tca-members.php';
         
-        // Features
+        // Features (Using the standardized 'class-vt-' prefix)
         require_once VT_PLUGIN_PATH . 'includes/features/class-vt-user-profiles.php';
         require_once VT_PLUGIN_PATH . 'includes/features/class-vt-claim-listings.php';
         require_once VT_PLUGIN_PATH . 'includes/features/class-vt-bookmarks.php';
         require_once VT_PLUGIN_PATH . 'includes/features/class-vt-notifications.php';
         require_once VT_PLUGIN_PATH . 'includes/features/class-vt-social-login.php';
         require_once VT_PLUGIN_PATH . 'includes/features/class-vt-import-export.php';
-        require_once VT_PLUGIN_PATH . 'includes/features/vt-rest-api-class.php';
+        require_once VT_PLUGIN_PATH . 'includes/features/class-vt-rest-api.php';
         
         // Frontend
         require_once VT_PLUGIN_PATH . 'includes/frontend/class-vt-shortcodes.php';
@@ -128,4 +128,3 @@ final class VisitThurmanPlugin {
 }
 
 VisitThurmanPlugin::get_instance();
-

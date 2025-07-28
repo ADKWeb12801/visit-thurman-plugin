@@ -1,1 +1,0 @@
-# visit-thurman-plugin

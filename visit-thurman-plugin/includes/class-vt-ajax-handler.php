@@ -6,9 +6,16 @@
 
 if (!defined('ABSPATH')) exit;
 
+/**
+ * Handles AJAX requests for Visit Thurman plugin.
+ */
 class VT_Ajax_Handler {
     private static $instance;
 
+    /**
+     * Get singleton instance.
+     * @return VT_Ajax_Handler
+     */
     public static function get_instance() {
         if (null === self::$instance) {
             self::$instance = new self();
@@ -16,6 +23,9 @@ class VT_Ajax_Handler {
         return self::$instance;
     }
 
+    /**
+     * Constructor: Registers AJAX actions.
+     */
     private function __construct() {
         add_action('wp_ajax_vt_toggle_bookmark', [$this, 'toggle_bookmark']);
         add_action('wp_ajax_nopriv_vt_toggle_bookmark', [$this, 'toggle_bookmark']);
@@ -23,16 +33,25 @@ class VT_Ajax_Handler {
         add_action('wp_ajax_nopriv_vt_fetch_listings', [$this, 'fetch_listings']);
     }
 
+    /**
+     * Toggle bookmark for a post via AJAX.
+     * Checks user capability and validates input.
+     */
     public function toggle_bookmark() {
         check_ajax_referer('vt_ajax_nonce', 'nonce');
 
         if (!is_user_logged_in()) {
-            wp_send_json_error(['message' => 'You must be logged in.']);
+            wp_send_json_error(['message' => __('You must be logged in to bookmark posts.', 'visit-thurman')]);
+        }
+
+        // Optionally, check capability (customize as needed)
+        if (!current_user_can('read')) {
+            wp_send_json_error(['message' => __('You do not have permission to bookmark posts.', 'visit-thurman')]);
         }
 
         $post_id = isset($_POST['post_id']) ? intval($_POST['post_id']) : 0;
         if (!$post_id || !get_post($post_id)) {
-            wp_send_json_error(['message' => 'Invalid post.']);
+            wp_send_json_error(['message' => __('Invalid or missing post.', 'visit-thurman')]);
         }
 
         global $wpdb;
@@ -42,18 +61,40 @@ class VT_Ajax_Handler {
         $is_bookmarked = VT_Bookmarks::user_has_bookmark($post_id, $user_id);
 
         if ($is_bookmarked) {
-            $wpdb->delete($table, ['user_id' => $user_id, 'post_id' => $post_id]);
-            wp_send_json_success(['status' => 'removed']);
+            $deleted = $wpdb->query(
+                $wpdb->prepare(
+                    "DELETE FROM $table WHERE user_id = %d AND post_id = %d",
+                    $user_id,
+                    $post_id
+                )
+            );
+            if ($deleted !== false) {
+                wp_send_json_success(['status' => 'removed']);
+            } else {
+                wp_send_json_error(['message' => __('Failed to remove bookmark. Please try again.', 'visit-thurman')]);
+            }
         } else {
-            $wpdb->insert($table, [
-                'user_id' => $user_id,
-                'post_id' => $post_id,
-                'post_type' => get_post_type($post_id),
-            ]);
-            wp_send_json_success(['status' => 'added']);
+            $inserted = $wpdb->insert(
+                $table,
+                [
+                    'user_id' => $user_id,
+                    'post_id' => $post_id,
+                    'post_type' => sanitize_text_field(get_post_type($post_id)),
+                ],
+                ['%d', '%d', '%s']
+            );
+            if ($inserted) {
+                wp_send_json_success(['status' => 'added']);
+            } else {
+                wp_send_json_error(['message' => __('Failed to add bookmark. Please try again.', 'visit-thurman')]);
+            }
         }
     }
 
+    /**
+     * Fetch listings via AJAX.
+     * Validates and sanitizes all input.
+     */
     public function fetch_listings() {
         check_ajax_referer('vt_ajax_nonce', 'nonce');
 
@@ -66,8 +107,8 @@ class VT_Ajax_Handler {
         $category  = isset($_POST['category']) ? sanitize_text_field($_POST['category']) : '';
         $paged     = isset($_POST['page']) ? intval($_POST['page']) : 1;
 
-        if (!post_type_exists($post_type)) {
-            wp_send_json_error(['message' => 'Invalid post type']);
+        if (!$post_type || !post_type_exists($post_type)) {
+            wp_send_json_error(['message' => __('Invalid or missing post type.', 'visit-thurman')]);
         }
 
         $args = [
@@ -76,7 +117,7 @@ class VT_Ajax_Handler {
             'paged'          => $paged,
             'orderby'        => $orderby,
             'order'          => $order,
-            's'             => $search,
+            's'              => $search,
         ];
 
         if ($category) {
@@ -91,6 +132,10 @@ class VT_Ajax_Handler {
         }
 
         $html = VT_Shortcodes::render_listings($args, $columns, true);
-        wp_send_json_success(['html' => $html]);
+        if ($html) {
+            wp_send_json_success(['html' => $html]);
+        } else {
+            wp_send_json_error(['message' => __('No listings found.', 'visit-thurman')]);
+        }
     }
 }

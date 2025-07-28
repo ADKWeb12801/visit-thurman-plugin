@@ -23,19 +23,28 @@ class VT_Claim_Listings {
     public static function get_user_claim($post_id, $user_id) {
         global $wpdb;
         $table = $wpdb->prefix . 'vt_claim_requests';
-        return $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE post_id = %d AND user_id = %d", $post_id, $user_id));
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table WHERE post_id = %d AND user_id = %d",
+            $post_id, $user_id
+        ));
     }
     
     public static function get_user_claims_count($user_id, $status = 'pending') {
         global $wpdb;
         $table = $wpdb->prefix . 'vt_claim_requests';
-        return $wpdb->get_var($wpdb->prepare("SELECT COUNT(id) FROM $table WHERE user_id = %d AND status = %s", $user_id, $status));
+        return $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(id) FROM $table WHERE user_id = %d AND status = %s",
+            $user_id, $status
+        ));
     }
 
     public static function get_claims_for_user($user_id) {
         global $wpdb;
         $table = $wpdb->prefix . 'vt_claim_requests';
-        return $wpdb->get_results($wpdb->prepare("SELECT * FROM $table WHERE user_id = %d ORDER BY created_at DESC", $user_id));
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table WHERE user_id = %d ORDER BY created_at DESC",
+            $user_id
+        ));
     }
 
     public function maybe_handle_claim_request() {
@@ -61,6 +70,7 @@ class VT_Claim_Listings {
             'created_at' => current_time('mysql'),
         ), array('%d','%d','%s','%s'));
 
+        // Notify admin of new claim request
         $admin_email = get_option('admin_email');
         if ($admin_email) {
             $subject = sprintf(__('New claim request for %s', 'visit-thurman'), get_the_title($post_id));
@@ -84,6 +94,11 @@ class VT_Claim_Listings {
         }
 
         $nonce = wp_create_nonce('vt_claim_listing');
-        return '<form method="post" class="vt-claim-form"><input type="hidden" name="post_id" value="' . esc_attr($post_id) . '"><input type="hidden" name="vt_claim_listing_nonce" value="' . esc_attr($nonce) . '"><button type="submit" class="vt-button">' . __('Claim This Listing', 'visit-thurman') . '</button></form>';
+        return '<form method="post" class="vt-claim-form">
+            <input type="hidden" name="post_id" value="' . esc_attr($post_id) . '">
+            <input type="hidden" name="vt_claim_listing_nonce" value="' . esc_attr($nonce) . '">
+            <button type="submit" class="vt-button">' . __('Claim This Listing', 'visit-thurman') . '</button>
+        </form>';
     }
 }
+

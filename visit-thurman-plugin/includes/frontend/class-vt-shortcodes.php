@@ -1,373 +1,104 @@
 <?php
 /**
- * Shortcodes handler for Visit Thurman plugin
+ * Claim Listings Feature
  * @package VisitThurman
  */
 
-if (!defined('ABSPATH')) {
-    exit;
+if (!defined('ABSPATH')) exit;
+
+class VT_Claim_Listings {
+    private static $instance;
+
+    public static function get_instance() {
+        if (null === self::$instance) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    private function __construct() {
+        add_action('init', array($this, 'maybe_handle_claim_request'));
+    }
+
+    public static function get_user_claim($post_id, $user_id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'vt_claim_requests';
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table WHERE post_id = %d AND user_id = %d",
+            $post_id, $user_id
+        ));
+    }
+    
+    public static function get_user_claims_count($user_id, $status = 'pending') {
+        global $wpdb;
+        $table = $wpdb->prefix . 'vt_claim_requests';
+        return $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(id) FROM $table WHERE user_id = %d AND status = %s",
+            $user_id, $status
+        ));
+    }
+
+    public static function get_claims_for_user($user_id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'vt_claim_requests';
+        return $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM $table WHERE user_id = %d ORDER BY created_at DESC",
+            $user_id
+        ));
+    }
+
+    public function maybe_handle_claim_request() {
+        if (!isset($_POST['vt_claim_listing_nonce']) || !isset($_POST['post_id'])) {
+            return;
+        }
+        if (!is_user_logged_in()) return;
+        if (!wp_verify_nonce($_POST['vt_claim_listing_nonce'], 'vt_claim_listing')) return;
+
+        $post_id = intval($_POST['post_id']);
+        $user_id = get_current_user_id();
+
+        if (self::get_user_claim($post_id, $user_id)) {
+            return;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'vt_claim_requests';
+        $wpdb->insert($table, array(
+            'user_id'    => $user_id,
+            'post_id'    => $post_id,
+            'status'     => 'pending',
+            'created_at' => current_time('mysql'),
+        ), array('%d','%d','%s','%s'));
+
+        // Notify admin of new claim request
+        $admin_email = get_option('admin_email');
+        if ($admin_email) {
+            $subject = sprintf(__('New claim request for %s', 'visit-thurman'), get_the_title($post_id));
+            $message = sprintf(__('User %s has requested to claim the listing "%s".', 'visit-thurman'), wp_get_current_user()->user_email, get_permalink($post_id));
+            wp_mail($admin_email, $subject, $message);
+        }
+    }
+
+    public static function render_claim_button($post_id = null) {
+        $post_id = $post_id ? intval($post_id) : get_the_ID();
+        if (!post_type_exists(get_post_type($post_id))) return '';
+
+        if (!is_user_logged_in()) {
+            return '<a href="' . esc_url(wp_login_url(get_permalink($post_id))) . '" class="vt-button">' . __('Log in to claim', 'visit-thurman') . '</a>';
+        }
+
+        $user_id = get_current_user_id();
+        $existing = self::get_user_claim($post_id, $user_id);
+        if ($existing) {
+            return '<span class="vt-meta">' . __('Claim pending approval', 'visit-thurman') . '</span>';
+        }
+
+        $nonce = wp_create_nonce('vt_claim_listing');
+        return '<form method="post" class="vt-claim-form">
+            <input type="hidden" name="post_id" value="' . esc_attr($post_id) . '">
+            <input type="hidden" name="vt_claim_listing_nonce" value="' . esc_attr($nonce) . '">
+            <button type="submit" class="vt-button">' . __('Claim This Listing', 'visit-thurman') . '</button>
+        </form>';
+    }
 }
 
-class VT_Shortcodes {
-    
-    public static function register() {
-        $post_types = ['events', 'businesses', 'accommodations', 'tca_members'];
-        foreach ($post_types as $pt) {
-            add_shortcode('vt_' . $pt, array(__CLASS__, 'render_listing_shortcode'));
-        }
-
-        add_shortcode('vt_next_events', array(__CLASS__, 'next_events_shortcode'));
-        add_shortcode('vt_upcoming_events', array(__CLASS__, 'upcoming_events_shortcode'));
-        
-        add_shortcode('vt_user_profile', array(__CLASS__, 'user_profile_shortcode'));
-        add_shortcode('vt_user_dashboard', array(__CLASS__, 'user_dashboard_shortcode'));
-        add_shortcode('vt_claim_listing', array(__CLASS__, 'claim_listing_shortcode'));
-        add_shortcode('vt_bookmark_button', array(__CLASS__, 'bookmark_button_shortcode'));
-        add_shortcode('vt_share_buttons', array(__CLASS__, 'share_buttons_shortcode'));
-    }
-    
-    public static function render_listing_shortcode($atts, $content = null, $tag = '') {
-        // Robustly map the shortcode tag (e.g., 'vt_events') to the CPT slug (e.g., 'vt_event')
-        $tag_to_cpt_map = [
-            'vt_events'        => 'vt_event',
-            'vt_businesses'    => 'vt_business',
-            'vt_accommodations' => 'vt_accommodation',
-            'vt_tca_members'   => 'vt_tca_member',
-        ];
-        $post_type = $tag_to_cpt_map[$tag] ?? '';
-
-        // If the tag is invalid, return an HTML comment to avoid breaking the page.
-        if (empty($post_type) || !post_type_exists($post_type)) {
-            return '<!-- Visit Thurman: Invalid shortcode tag: ' . esc_html($tag) . ' -->';
-        }
-
-        $atts = shortcode_atts(array(
-            'limit'     => 12,
-            'columns'   => 3,
-            'orderby'   => 'date',
-            'order'     => 'DESC',
-            'category'  => '',
-            'tag'       => '',
-            'meta_key'  => '',
-            'search'    => '',
-            'ajax'      => 'false'
-        ), $atts);
-        
-        $paged = (get_query_var('paged')) ? get_query_var('paged') : 1;
-        $args = array(
-            'post_type'      => $post_type,
-            'posts_per_page' => intval($atts['limit']),
-            'post_status'    => 'publish',
-            'paged'          => $paged,
-            'orderby'        => sanitize_text_field($atts['orderby']),
-            'order'          => sanitize_text_field($atts['order']),
-        );
-
-        if (!empty($atts['category'])) {
-            $taxonomy = $post_type . '_category';
-            if (taxonomy_exists($taxonomy)) {
-                $args['tax_query'][] = array(
-                    'taxonomy' => $taxonomy,
-                    'field'    => 'slug',
-                    'terms'    => sanitize_title($atts['category'])
-                );
-            }
-        }
-
-        if (!empty($atts['tag'])) {
-            $taxonomy = $post_type . '_tag';
-            if (taxonomy_exists($taxonomy)) {
-                $args['tax_query'][] = array(
-                    'taxonomy' => $taxonomy,
-                    'field'    => 'slug',
-                    'terms'    => sanitize_title($atts['tag'])
-                );
-            }
-        }
-
-        if (!empty($atts['meta_key'])) {
-            $args['meta_key'] = sanitize_key($atts['meta_key']);
-            $args['orderby'] = 'meta_value';
-        }
-
-        if (!empty($atts['search'])) {
-            $args['s'] = sanitize_text_field($atts['search']);
-        }
-
-        $output = '';
-        if ($atts['ajax'] === 'true') {
-            $uid = 'vt-list-' . wp_generate_password(8, false, false);
-            $terms = get_terms(array('taxonomy' => $post_type . '_category', 'hide_empty' => false));
-            $output .= '<form class="vt-listing-filters" data-target="#' . esc_attr($uid) . '">';
-            $output .= '<input type="hidden" name="post_type" value="' . esc_attr($post_type) . '">';
-            $output .= '<input type="hidden" name="limit" value="' . intval($atts['limit']) . '">';
-            $output .= '<input type="hidden" name="columns" value="' . intval($atts['columns']) . '">';
-            $output .= '<input type="text" name="search" placeholder="' . esc_attr__('Search', 'visit-thurman') . '">';
-            $output .= '<select name="orderby">';
-            $output .= '<option value="date">' . esc_html__('Date', 'visit-thurman') . '</option>';
-            $output .= '<option value="title">' . esc_html__('Title', 'visit-thurman') . '</option>';
-            $output .= '</select>';
-            if ($terms && !is_wp_error($terms)) {
-                $output .= '<select name="category"><option value="">' . esc_html__('Category', 'visit-thurman') . '</option>';
-                foreach ($terms as $term) {
-                    $output .= '<option value="' . esc_attr($term->slug) . '">' . esc_html($term->name) . '</option>';
-                }
-                $output .= '</select>';
-            }
-            $output .= '<button type="submit" class="vt-button">' . esc_html__('Filter', 'visit-thurman') . '</button>';
-            $output .= '</form>';
-            $output .= '<div id="' . esc_attr($uid) . '">';
-            $output .= self::render_listings($args, $atts['columns']);
-            $output .= '</div>';
-            return $output;
-        }
-
-        return self::render_listings($args, $atts['columns']);
-    }
-
-    public static function render_listings($args, $columns = 3, $no_pagination = false) {
-        $query = new WP_Query($args);
-
-        ob_start();
-
-        if ($query->have_posts()) {
-            echo '<div class="vt-grid vt-grid-' . esc_attr($columns) . '">';
-            while ($query->have_posts()) {
-                $query->the_post();
-                self::render_card(get_the_ID());
-            }
-            echo '</div>';
-
-            if (!$no_pagination) {
-                echo '<div class="vt-pagination">';
-                echo paginate_links(array(
-                    'total' => $query->max_num_pages,
-                    'current' => max(1, $args['paged']),
-                    'prev_text' => __('&laquo; Prev', 'visit-thurman'),
-                    'next_text' => __('Next &raquo;', 'visit-thurman'),
-                ));
-                echo '</div>';
-            }
-
-        } else {
-            echo '<p>' . __('No listings found.', 'visit-thurman') . '</p>';
-        }
-
-        wp_reset_postdata();
-        return ob_get_clean();
-    }
-
-    public static function render_card($post_id) {
-        ?>
-        <div class="vt-card">
-            <?php if (has_post_thumbnail($post_id)) : ?>
-                <div class="vt-card-image">
-                    <a href="<?php echo get_permalink($post_id); ?>">
-                        <?php echo get_the_post_thumbnail($post_id, 'medium_large'); ?>
-                    </a>
-                </div>
-            <?php endif; ?>
-            <div class="vt-card-content">
-                <h3 class="vt-card-title">
-                    <a href="<?php echo get_permalink($post_id); ?>"><?php echo get_the_title($post_id); ?></a>
-                </h3>
-                <div class="vt-card-excerpt">
-                    <?php echo get_the_excerpt($post_id); ?>
-                </div>
-                <div class="vt-card-footer">
-                    <a href="<?php echo get_permalink($post_id); ?>" class="vt-btn vt-btn-primary vt-btn-sm"><?php _e('View Details', 'visit-thurman'); ?></a>
-                    <?php echo self::bookmark_button_shortcode(['post_id' => $post_id]); ?>
-                </div>
-            </div>
-        </div>
-        <?php
-    }
-
-    public static function user_profile_shortcode() {
-        if (!is_user_logged_in()) {
-            return '<div class="vt-alert vt-alert-info">' . sprintf(
-                __('Please <a href="%s">log in</a> to view your profile.', 'visit-thurman'),
-                esc_url(wp_login_url(get_permalink()))
-            ) . '</div>';
-        }
-        
-        $user = wp_get_current_user();
-        $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'overview';
-        
-        ob_start();
-        ?>
-        <div class="vt-profile-wrapper">
-            <header class="vt-profile-header">
-                <div class="vt-container vt-flex vt-items-center vt-gap-3">
-                    <?php echo get_avatar($user->ID, 120, '', '', ['class' => 'vt-profile-avatar']); ?>
-                    <div>
-                        <h1 class="vt-h1" style="color:white;"><?php echo esc_html($user->display_name); ?></h1>
-                    </div>
-                </div>
-            </header>
-
-            <div class="vt-container">
-                <nav class="vt-profile-tabs">
-                    <a href="?tab=overview" class="vt-profile-tab <?php if($active_tab === 'overview') echo 'is-active'; ?>"><?php _e('Overview', 'visit-thurman'); ?></a>
-                    <a href="?tab=bookmarks" class="vt-profile-tab <?php if($active_tab === 'bookmarks') echo 'is-active'; ?>"><?php _e('Bookmarks', 'visit-thurman'); ?></a>
-                    <a href="?tab=settings" class="vt-profile-tab <?php if($active_tab === 'settings') echo 'is-active'; ?>"><?php _e('Settings', 'visit-thurman'); ?></a>
-                </nav>
-                
-                <div id="overview" class="vt-profile-tab-content <?php if($active_tab === 'overview') echo 'is-active'; ?>">
-                    <h2 class="vt-h2"><?php _e('Your Listings', 'visit-thurman'); ?></h2>
-                    <p><?php _e('Your claimed and created listings will appear here.', 'visit-thurman'); ?></p>
-                </div>
-                <div id="bookmarks" class="vt-profile-tab-content <?php if($active_tab === 'bookmarks') echo 'is-active'; ?>">
-                     <h2 class="vt-h2"><?php _e('Your Bookmarks', 'visit-thurman'); ?></h2>
-                    <p><?php _e('Your saved listings will appear here.', 'visit-thurman'); ?></p>
-                </div>
-                <div id="settings" class="vt-profile-tab-content <?php if($active_tab === 'settings') echo 'is-active'; ?>">
-                     <h2 class="vt-h2"><?php _e('Profile Settings', 'visit-thurman'); ?></h2>
-                     <p><?php printf(__('You can edit your profile on the <a href="%s">WordPress profile page</a>.', 'visit-thurman'), esc_url(get_edit_profile_url())); ?></p>
-                </div>
-            </div>
-        </div>
-        <?php
-        return ob_get_clean();
-    }
-    
-    public static function bookmark_button_shortcode($atts) {
-        if (!is_user_logged_in() || !class_exists('VT_Bookmarks')) return '';
-
-        $atts = shortcode_atts(['post_id' => get_the_ID()], $atts);
-        $post_id = intval($atts['post_id']);
-        $is_bookmarked = VT_Bookmarks::user_has_bookmark($post_id);
-        
-        $class = 'vt-bookmark-btn' . ($is_bookmarked ? ' is-bookmarked' : '');
-        $title = $is_bookmarked ? __('Remove bookmark', 'visit-thurman') : __('Add bookmark', 'visit-thurman');
-
-        return sprintf(
-            '<button class="%s" data-post-id="%d" title="%s"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>',
-            esc_attr($class),
-            esc_attr($post_id),
-            esc_attr($title)
-        );
-    }
-
-    public static function next_events_shortcode($atts) {
-        $atts = shortcode_atts(['limit' => 3], $atts);
-        $args = [
-            'post_type' => VT_Events::POST_TYPE,
-            'posts_per_page' => intval($atts['limit']),
-            'meta_key' => '_vt_start_date',
-            'orderby' => 'meta_value',
-            'order' => 'ASC',
-            'meta_query' => [
-                [
-                    'key' => '_vt_start_date',
-                    'value' => current_time('Y-m-d'),
-                    'compare' => '>=',
-                    'type' => 'DATE'
-                ]
-            ]
-        ];
-        $query = new WP_Query($args);
-        ob_start();
-        if ($query->have_posts()) {
-            echo '<div class="vt-grid vt-grid-1">';
-            while ($query->have_posts()) {
-                $query->the_post();
-                self::render_card(get_the_ID());
-            }
-            echo '</div>';
-        }
-        wp_reset_postdata();
-        return ob_get_clean();
-    }
-
-    public static function upcoming_events_shortcode($atts) {
-        $atts = shortcode_atts(['category' => '', 'limit' => 6], $atts);
-        $tax_query = [];
-        if (!empty($atts['category'])) {
-            $tax_query[] = [
-                'taxonomy' => 'vt_event_category',
-                'field' => 'slug',
-                'terms' => sanitize_title($atts['category'])
-            ];
-        }
-
-        $args = [
-            'post_type' => VT_Events::POST_TYPE,
-            'posts_per_page' => intval($atts['limit']),
-            'meta_key' => '_vt_start_date',
-            'orderby' => 'meta_value',
-            'order' => 'ASC',
-            'tax_query' => $tax_query,
-            'meta_query' => [
-                [
-                    'key' => '_vt_start_date',
-                    'value' => current_time('Y-m-d'),
-                    'compare' => '>=',
-                    'type' => 'DATE'
-                ]
-            ]
-        ];
-
-        $query = new WP_Query($args);
-        ob_start();
-        if ($query->have_posts()) {
-            echo '<div class="vt-grid vt-grid-3">';
-            while ($query->have_posts()) {
-                $query->the_post();
-                self::render_card(get_the_ID());
-            }
-            echo '</div>';
-        }
-        wp_reset_postdata();
-        return ob_get_clean();
-    }
-
-    public static function user_dashboard_shortcode() {
-        if (!is_user_logged_in()) {
-            return '<div class="vt-alert vt-alert-info">' . sprintf(__('Please <a href="%s">log in</a> to view your dashboard.', 'visit-thurman'), esc_url(wp_login_url(get_permalink()))) . '</div>';
-        }
-
-        $claims = VT_Claim_Listings::get_claims_for_user(get_current_user_id());
-
-        ob_start();
-        echo '<div class="vt-container">';
-        echo '<h2>' . __('My Claims', 'visit-thurman') . '</h2>';
-        if ($claims) {
-            echo '<ul class="vt-list">';
-            foreach ($claims as $claim) {
-                $title = get_the_title($claim->post_id);
-                $status = ucfirst($claim->status);
-                echo '<li>' . esc_html($title) . ' - ' . esc_html($status) . '</li>';
-            }
-            echo '</ul>';
-        } else {
-            echo '<p>' . __('You have no claim requests.', 'visit-thurman') . '</p>';
-        }
-        echo '</div>';
-        return ob_get_clean();
-    }
-
-    public static function claim_listing_shortcode($atts) {
-        $atts = shortcode_atts(['post_id' => get_the_ID()], $atts);
-        return VT_Claim_Listings::render_claim_button(intval($atts['post_id']));
-    }
-
-    public static function share_buttons_shortcode($atts) {
-        $atts = shortcode_atts(['post_id' => get_the_ID()], $atts);
-        $post_id = intval($atts['post_id']);
-        $url = urlencode(get_permalink($post_id));
-        $title = urlencode(get_the_title($post_id));
-
-        $facebook = "https://www.facebook.com/sharer/sharer.php?u={$url}";
-        $twitter  = "https://twitter.com/intent/tweet?url={$url}&text={$title}";
-        $linkedin = "https://www.linkedin.com/shareArticle?mini=true&url={$url}&title={$title}";
-
-        ob_start();
-        echo '<div class="vt-share-buttons">';
-        echo '<a class="vt-button vt-btn-sm" href="' . esc_url($facebook) . '" target="_blank" rel="noopener">FB</a> ';
-        echo '<a class="vt-button vt-btn-sm" href="' . esc_url($twitter) . '" target="_blank" rel="noopener">TW</a> ';
-        echo '<a class="vt-button vt-btn-sm" href="' . esc_url($linkedin) . '" target="_blank" rel="noopener">LI</a>';
-        echo '</div>';
-        return ob_get_clean();
-    }
-}
